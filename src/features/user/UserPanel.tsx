@@ -1,8 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { signOut } from 'firebase/auth';
 import { motion } from 'framer-motion';
-import { auth } from '@/shared/services/firebase';
 import { useAuthStore } from '@/shared/stores/authStore';
 import { useChatStore } from '@/shared/stores/chatStore';
 import { Avatar } from '@/shared/components';
@@ -77,7 +75,15 @@ export const UserPanel: React.FC<UserPanelProps> = ({ onClose }) => {
   };
 
   const handleSignOut = async () => {
-    await signOut(auth);
+    try {
+      const { auth } = await import('@/shared/services/firebase');
+      if (auth) {
+        const { signOut } = await import('firebase/auth');
+        await signOut(auth as import('firebase/auth').Auth);
+      }
+    } catch {
+      // mock mode — no Firebase
+    }
     clearUser();
     navigate('/');
   };

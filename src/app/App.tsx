@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ProtectedRoute } from './ProtectedRoute';
 
@@ -21,7 +21,7 @@ const Loader: React.FC = () => (
 
 export const App: React.FC = () => (
   <QueryClientProvider client={queryClient}>
-    <BrowserRouter>
+    <HashRouter>
       <Suspense fallback={<Loader />}>
         <Routes>
           <Route path="/"     element={<LandingPage />} />
@@ -37,6 +37,6 @@ export const App: React.FC = () => (
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
-    </BrowserRouter>
+    </HashRouter>
   </QueryClientProvider>
 );

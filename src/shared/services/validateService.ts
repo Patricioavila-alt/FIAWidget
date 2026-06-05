@@ -91,7 +91,7 @@ export async function validatePrescription(
               const parsed = JSON.parse(dataLine) as Record<string, unknown>;
 
               if (eventType === 'node') {
-                const nodePayload = parsed as ValidateNode;
+                const nodePayload = parsed as unknown as ValidateNode;
                 callbacks.onNode(nodePayload);
 
                 // Extraer veredicto del nodo "resolver"
