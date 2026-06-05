@@ -1,0 +1,125 @@
+import { create } from 'zustand';
+import type { Message, ChatSession } from '@/shared/types';
+import { nanoid } from 'nanoid';
+
+interface ChatState {
+  sessions: ChatSession[];
+  activeSessionId: string | null;
+  isAgentTyping: boolean;
+
+  // Selectors
+  activeSession: () => ChatSession | undefined;
+
+  // Actions
+  createSession: (userId: string) => string;
+  setActiveSession: (id: string) => void;
+  addMessage: (sessionId: string, message: Omit<Message, 'id' | 'timestamp'>) => string;
+  updateMessage: (sessionId: string, messageId: string, patch: Partial<Message>) => void;
+  appendToMessage: (sessionId: string, messageId: string, token: string) => void;
+  updateSessionTitle: (sessionId: string, title: string) => void;
+  setAgentTyping: (typing: boolean) => void;
+  deleteSession: (sessionId: string) => void;
+}
+
+export const useChatStore = create<ChatState>()((set, get) => ({
+  sessions: [],
+  activeSessionId: null,
+  isAgentTyping: false,
+
+  activeSession: () => {
+    const { sessions, activeSessionId } = get();
+    return sessions.find((s) => s.id === activeSessionId);
+  },
+
+  createSession: (userId) => {
+    const id: string = nanoid();
+    const now = new Date();
+    const session: ChatSession = {
+      id,
+      userId,
+      title: 'Nueva conversación',
+      messages: [],
+      createdAt: now,
+      updatedAt: now,
+    };
+    set((state) => ({
+      sessions: [session, ...state.sessions],
+      activeSessionId: id,
+    }));
+    return id;
+  },
+
+  setActiveSession: (id) => set({ activeSessionId: id }),
+
+  addMessage: (sessionId, msg) => {
+    const id: string = nanoid();
+    const message: Message = { ...msg, id, timestamp: new Date() };
+    set((state) => ({
+      sessions: state.sessions.map((s) =>
+        s.id === sessionId
+          ? { ...s, messages: [...s.messages, message], updatedAt: new Date() }
+          : s,
+      ),
+    }));
+    return id;
+  },
+
+  updateMessage: (sessionId, messageId, patch) => {
+    set((state) => ({
+      sessions: state.sessions.map((s) =>
+        s.id === sessionId
+          ? {
+              ...s,
+              messages: s.messages.map((m) =>
+                m.id === messageId ? { ...m, ...patch } : m,
+              ),
+            }
+          : s,
+      ),
+    }));
+  },
+
+  appendToMessage: (sessionId, messageId, token) => {
+    set((state) => ({
+      sessions: state.sessions.map((s) =>
+        s.id === sessionId
+          ? {
+              ...s,
+              messages: s.messages.map((m) => {
+                if (m.id !== messageId) return m;
+                const parts = m.parts.map((p, i) =>
+                  i === m.parts.length - 1 && p.type === 'text'
+                    ? { ...p, text: p.text + token }
+                    : p,
+                );
+                return { ...m, parts };
+              }),
+            }
+          : s,
+      ),
+    }));
+  },
+
+  updateSessionTitle: (sessionId, title) => {
+    set((state) => ({
+      sessions: state.sessions.map((s) =>
+        s.id === sessionId ? { ...s, title } : s,
+      ),
+    }));
+  },
+
+  setAgentTyping: (typing) => set({ isAgentTyping: typing }),
+
+  deleteSession: (sessionId) => {
+    set((state) => {
+      const sessions = state.sessions.filter((s) => s.id !== sessionId);
+      return {
+        sessions,
+        activeSessionId:
+          state.activeSessionId === sessionId
+            ? (sessions[0]?.id ?? null)
+            : state.activeSessionId,
+      };
+    });
+  },
+}));
