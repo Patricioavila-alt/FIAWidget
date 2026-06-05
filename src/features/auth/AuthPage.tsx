@@ -57,7 +57,8 @@ export const AuthPage: React.FC = () => {
     setError('');
     setLoading(true);
     setTimeout(() => {
-      setUser({ uid: `mock-${phone.replace(/\D/g, '')}`, phone: `+52${phone.replace(/\D/g, '')}`, name: name.trim(), createdAt: new Date() });
+      const digits = phone.replace(/\D/g, '');
+      setUser({ uid: `+52${digits}`, phone: `+52${digits}`, name: name.trim(), createdAt: new Date() });
       setLoading(false);
       navigate('/chat');
     }, 500);
