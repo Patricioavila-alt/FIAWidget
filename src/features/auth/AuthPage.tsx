@@ -3,12 +3,33 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/shared/stores/authStore';
 import { OTPInput } from '@/shared/components';
+import { requestOtp, verifyOtpAndRegister } from '@/shared/services/authService';
 import './AuthPage.css';
 
 // ─────────────────────────────────────────────
-// MOCK MODE: código OTP = "0000" (4 dígitos)
+// REGEX Y PARSEO DE CURP
 // ─────────────────────────────────────────────
-const MOCK_OTP = '0000';
+const CURP_REGEX = /^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d$/;
+
+function parseCurp(curp: string): { sex: 'H' | 'M'; dob: string } | null {
+  const clean = curp.toUpperCase().trim();
+  if (!CURP_REGEX.test(clean)) return null;
+
+  const yy = clean.substring(4, 6);
+  const mm = clean.substring(6, 8);
+  const dd = clean.substring(8, 10);
+  const sexChar = clean.charAt(10);
+  
+  const centuryChar = clean.charAt(16);
+  const is21stCentury = isNaN(Number(centuryChar));
+  const yearPrefix = is21stCentury ? '20' : '19';
+  const dob = `${yearPrefix}${yy}-${mm}-${dd}`;
+
+  return {
+    sex: sexChar as 'H' | 'M',
+    dob,
+  };
+}
 
 type Step = 'phone' | 'otp' | 'name';
 
@@ -16,14 +37,17 @@ export const AuthPage: React.FC = () => {
   const navigate    = useNavigate();
   const { setUser } = useAuthStore();
 
-  const [step,      setStep]      = useState<Step>('phone');
-  const [phone,     setPhone]     = useState('');
-  const [otp,       setOtp]       = useState('');
-  const [name,      setName]      = useState('');
-  const [loading,   setLoading]   = useState(false);
-  const [error,     setError]     = useState('');
-  const [accepted,  setAccepted]  = useState(false);
-  const [countdown, setCountdown] = useState(0);
+  const [step,          setStep]          = useState<Step>('phone');
+  const [phone,         setPhone]         = useState('');
+  const [curp,          setCurp]          = useState('');
+  const [otp,           setOtp]           = useState('');
+  const [name,          setName]          = useState('');
+  const [loading,       setLoading]       = useState(false);
+  const [error,         setError]         = useState('');
+  const [accepted,      setAccepted]      = useState(false);
+  const [countdown,     setCountdown]     = useState(0);
+  const [debugOtpHint,  setDebugOtpHint]  = useState('');
+  const [regResult,     setRegResult]     = useState<{ userId: string; accessToken: string; isDemo: boolean } | null>(null);
 
   const startCountdown = () => {
     setCountdown(30);
@@ -32,24 +56,71 @@ export const AuthPage: React.FC = () => {
     }, 1000);
   };
 
-  const handleSendOTP = () => {
+  const handleSendOTP = async () => {
     setError('');
     const digits = phone.replace(/\D/g, '');
-    if (digits.length < 10) { setError('Ingresa un número válido de 10 dígitos'); return; }
-    if (!accepted)           { setError('Debes aceptar el Aviso de Privacidad para continuar'); return; }
+    if (digits.length < 10) { setError('Ingresa un número de celular de 10 dígitos'); return; }
+    
+    const curpVal = curp.toUpperCase().trim();
+    if (!curpVal) { setError('Ingresa tu CURP'); return; }
+    if (!CURP_REGEX.test(curpVal)) { setError('Ingresa una CURP válida (18 caracteres)'); return; }
+    
+    if (!accepted) { setError('Debes aceptar el Aviso de Privacidad para continuar'); return; }
+    
     setLoading(true);
-    setTimeout(() => { setLoading(false); setStep('otp'); startCountdown(); }, 800);
+    try {
+      const formattedPhone = `+52${digits}`;
+      const res = await requestOtp(curpVal, formattedPhone);
+      setLoading(false);
+      setStep('otp');
+      startCountdown();
+      
+      if (res.debug_otp) {
+        setDebugOtpHint(res.debug_otp);
+      } else {
+        setDebugOtpHint('');
+      }
+    } catch (err: any) {
+      setLoading(false);
+      setError(err.message || 'Error al solicitar el código OTP. Intenta de nuevo.');
+    }
   };
 
-  const handleVerifyOTP = () => {
+  const handleVerifyOTP = async () => {
     if (otp.length < 4) return;
     setError('');
     setLoading(true);
-    setTimeout(() => {
+
+    const curpVal = curp.toUpperCase().trim();
+    const digits = phone.replace(/\D/g, '');
+    const formattedPhone = `+52${digits}`;
+
+    const parsed = parseCurp(curpVal);
+    if (!parsed) {
       setLoading(false);
-      if (otp === MOCK_OTP) { setStep('name'); }
-      else { setError(`Código incorrecto. Usa "${MOCK_OTP}" por ahora.`); setOtp(''); }
-    }, 600);
+      setError('Formato de CURP inválido');
+      return;
+    }
+
+    try {
+      const res = await verifyOtpAndRegister(
+        curpVal,
+        formattedPhone,
+        otp,
+        parsed.sex,
+        parsed.dob
+      );
+      setLoading(false);
+      setRegResult({
+        userId: res.user_id,
+        accessToken: res.access_token,
+        isDemo: res.is_demo
+      });
+      setStep('name');
+    } catch (err: any) {
+      setLoading(false);
+      setError(err.message || 'Código OTP incorrecto o expirado.');
+    }
   };
 
   const handleSaveName = () => {
@@ -58,7 +129,14 @@ export const AuthPage: React.FC = () => {
     setLoading(true);
     setTimeout(() => {
       const digits = phone.replace(/\D/g, '');
-      setUser({ uid: `+52${digits}`, phone: `+52${digits}`, name: name.trim(), createdAt: new Date() });
+      setUser({ 
+        uid: regResult?.userId || `+52${digits}`, 
+        phone: `+52${digits}`, 
+        name: name.trim(), 
+        createdAt: new Date(),
+        token: regResult?.accessToken,
+        curp: curp.toUpperCase().trim()
+      });
       setLoading(false);
       navigate('/chat');
     }, 500);
@@ -129,12 +207,12 @@ export const AuthPage: React.FC = () => {
           </div>
 
           <AnimatePresence mode="wait">
-            {/* ── STEP 1: Teléfono ── */}
+            {/* ── STEP 1: Teléfono & CURP ── */}
             {step === 'phone' && (
               <motion.div key="phone" className="auth-step" variants={stepVariants} initial="hidden" animate="visible" exit="exit">
                 <div className="auth-step__header">
                   <h1 className="auth-step__title">Identifícate</h1>
-                  <p className="auth-step__subtitle">Ingresa tu número de celular y te enviaremos un código de verificación</p>
+                  <p className="auth-step__subtitle">Ingresa tu número de celular y tu CURP para vincular tu expediente clínico</p>
                 </div>
 
                 <div className="auth-field">
@@ -152,11 +230,23 @@ export const AuthPage: React.FC = () => {
                       placeholder="55 1234 5678"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleSendOTP()}
                       maxLength={15}
                       autoFocus
                     />
                   </div>
+                </div>
+
+                <div className="auth-field" style={{ marginTop: '16px' }}>
+                  <label className="auth-field__label" htmlFor="curp-input">CURP</label>
+                  <input
+                    id="curp-input"
+                    type="text"
+                    className="auth-field__input auth-field__input--standalone"
+                    placeholder="Ej. GARM850315HDFXXX04"
+                    value={curp}
+                    onChange={(e) => setCurp(e.target.value.toUpperCase())}
+                    maxLength={18}
+                  />
                 </div>
 
                 {/* Terms checkbox */}
@@ -206,7 +296,11 @@ export const AuthPage: React.FC = () => {
                 </div>
 
                 <div className="auth-mock-hint">
-                  🧪 Modo demo — usa el código <strong>{MOCK_OTP}</strong>
+                  {debugOtpHint ? (
+                    <>🧪 Código real de prueba: <strong>{debugOtpHint}</strong></>
+                  ) : (
+                    <>🧪 Modo demo — usa el código <strong>0000</strong></>
+                  )}
                 </div>
 
                 <OTPInput value={otp} onChange={setOtp} length={4} disabled={loading} />

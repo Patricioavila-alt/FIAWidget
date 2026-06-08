@@ -7,6 +7,8 @@ export interface User {
   phone: string;
   name: string;
   createdAt: Date;
+  token?: string;
+  curp?: string;
 }
 
 export type MessageRole = 'user' | 'assistant';
