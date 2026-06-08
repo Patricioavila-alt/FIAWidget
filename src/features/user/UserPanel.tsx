@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate }    from 'react-router-dom';
 import { motion }         from 'framer-motion';
 import { useAuthStore }   from '@/shared/stores/authStore';
 import { useChatStore }   from '@/shared/stores/chatStore';
-import { useChatContext } from '@/features/chat/ChatContext';   // ← FIX Error 1
+import { useChatContext } from '@/features/chat/ChatContext';
 import { Avatar }         from '@/shared/components';
+import { fetchUserProfile } from '@/shared/services/authService';
+import type { UserProfile } from '@/shared/services/authService';
 import type { Capability } from '@/shared/types';
 import './UserPanel.css';
 
@@ -60,13 +62,25 @@ interface UserPanelProps {
 export const UserPanel: React.FC<UserPanelProps> = ({ onClose }) => {
   const navigate              = useNavigate();
   const { user, clearUser }   = useAuthStore();
-  const { createSession, activeSessionId } = useChatStore();
+  const { createSession, activeSessionId, activeSession } = useChatStore();
   const { send }              = useChatContext();
 
-  const [showSignOutConfirm, setShowSignOutConfirm] = React.useState(false);
-  const [darkMode, setDarkMode] = React.useState(() => {
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => {
     return document.documentElement.classList.contains('dark') || localStorage.getItem('theme') === 'dark';
   });
+
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(false);
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    expediente: true,
+    medications: false,
+    appointments: false
+  });
+
+  const toggleSection = (sec: string) => {
+    setOpenSections(prev => ({ ...prev, [sec]: !prev[sec] }));
+  };
 
   const toggleDarkMode = () => {
     const nextMode = !darkMode;
@@ -87,6 +101,58 @@ export const UserPanel: React.FC<UserPanelProps> = ({ onClose }) => {
       document.documentElement.classList.remove('dark');
     }
   }, [darkMode]);
+
+  const loadProfile = useCallback(async () => {
+    setLoadingProfile(true);
+    try {
+      const p = await fetchUserProfile();
+      setProfile(p);
+    } catch {
+      // Fallback
+    } finally {
+      setLoadingProfile(false);
+    }
+  }, []);
+
+  const session = activeSession();
+  const messagesCount = session?.messages.length ?? 0;
+
+  useEffect(() => {
+    loadProfile();
+  }, [loadProfile, messagesCount]);
+
+  const parsedCurpInfo = useMemo(() => {
+    if (!user?.curp) return null;
+    const clean = user.curp.toUpperCase().trim();
+    if (clean.length < 10) return null;
+    const yy = clean.substring(4, 6);
+    const mm = clean.substring(6, 8);
+    const dd = clean.substring(8, 10);
+    const sexChar = clean.charAt(10);
+    const centuryChar = clean.charAt(16);
+    const is21stCentury = isNaN(Number(centuryChar));
+    const yearPrefix = is21stCentury ? '20' : '19';
+    const dob = `${yearPrefix}${yy}-${mm}-${dd}`;
+    
+    // Calcular edad
+    const birthDate = new Date(dob);
+    let age = '';
+    if (!isNaN(birthDate.getTime())) {
+      const today = new Date();
+      let ageNum = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        ageNum--;
+      }
+      age = `${ageNum} años`;
+    }
+    
+    return {
+      sex: sexChar === 'H' ? 'Masculino' : sexChar === 'M' ? 'Femenino' : 'Otro',
+      dob,
+      age
+    };
+  }, [user?.curp]);
 
   const handleCapability = (cap: Capability) => {
     if (!user) return;
@@ -129,7 +195,7 @@ export const UserPanel: React.FC<UserPanelProps> = ({ onClose }) => {
           <>
             <Avatar name={user?.name ?? '?'} size="lg" />
             <div className="user-panel__info">
-              <span className="user-panel__name">{user?.name}</span>
+              <span className="user-panel__name">{profile?.name || user?.name}</span>
               <span className="user-panel__phone">{user?.phone}</span>
             </div>
             <div className="user-panel__actions">
@@ -171,6 +237,123 @@ export const UserPanel: React.FC<UserPanelProps> = ({ onClose }) => {
           >
             {darkMode ? 'Activado 🌙' : 'Desactivado ☀️'}
           </button>
+        </div>
+      </div>
+
+      <div className="user-panel__divider" />
+
+      {/* Expediente Clínico / Health File */}
+      <div className="user-panel__section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span>Expediente Clínico</span>
+        {loadingProfile && <span style={{ fontSize: '10px', textTransform: 'none', color: 'var(--clr-text-muted)', animation: 'btn-spin 1s linear infinite' }}>⟳</span>}
+      </div>
+      <div className="user-panel__accordions">
+        {/* Sección: Datos Generales */}
+        <div className="panel-accordion">
+          <button className="panel-accordion__header" onClick={() => toggleSection('expediente')}>
+            <span className="panel-accordion__title">📋 Datos Generales</span>
+            <span className="panel-accordion__arrow">{openSections.expediente ? '▲' : '▼'}</span>
+          </button>
+          {openSections.expediente && (
+            <div className="panel-accordion__content">
+              {user?.curp && (
+                <div className="info-item">
+                  <span className="info-label">CURP</span>
+                  <span className="info-value">{user.curp}</span>
+                </div>
+              )}
+              {parsedCurpInfo && (
+                <>
+                  <div className="info-item">
+                    <span className="info-label">Edad</span>
+                    <span className="info-value">{parsedCurpInfo.age}</span>
+                  </div>
+                  <div className="info-item">
+                    <span className="info-label">Sexo</span>
+                    <span className="info-value">{parsedCurpInfo.sex}</span>
+                  </div>
+                </>
+              )}
+              {profile && (
+                <>
+                  <div className="info-item">
+                    <span className="info-label">Grupo Sanguíneo</span>
+                    <span className="info-value badge badge--blood">{profile.blood_type || 'No especificado'}</span>
+                  </div>
+                  <div className="info-item">
+                    <span className="info-label">Alergias</span>
+                    <span className="info-value text-red">
+                      {profile.allergies && profile.allergies.length > 0 
+                        ? profile.allergies.join(', ') 
+                        : 'Ninguna detectada'}
+                    </span>
+                  </div>
+                  <div className="info-item">
+                    <span className="info-label">Condiciones</span>
+                    <span className="info-value">
+                      {profile.conditions && profile.conditions.length > 0 
+                        ? profile.conditions.join(', ') 
+                        : 'Ninguna registrada'}
+                    </span>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Sección: Medicación Activa */}
+        <div className="panel-accordion">
+          <button className="panel-accordion__header" onClick={() => toggleSection('medications')}>
+            <span className="panel-accordion__title">💊 Medicamentos Activos ({profile?.active_medications?.length ?? 0})</span>
+            <span className="panel-accordion__arrow">{openSections.medications ? '▲' : '▼'}</span>
+          </button>
+          {openSections.medications && (
+            <div className="panel-accordion__content">
+              {profile?.active_medications && profile.active_medications.length > 0 ? (
+                <div className="meds-list">
+                  {profile.active_medications.map((med, i) => (
+                    <div key={i} className="med-item">
+                      <span className="med-name">🔹 {med.name}</span>
+                      <span className="med-freq">{med.frequency}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <span className="accordion-empty">Sin medicamentos activos en el perfil.</span>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Sección: Próximas Citas */}
+        <div className="panel-accordion">
+          <button className="panel-accordion__header" onClick={() => toggleSection('appointments')}>
+            <span className="panel-accordion__title">📅 Próximas Citas ({profile?.upcoming_appointments?.length ?? 0})</span>
+            <span className="panel-accordion__arrow">{openSections.appointments ? '▲' : '▼'}</span>
+          </button>
+          {openSections.appointments && (
+            <div className="panel-accordion__content">
+              {profile?.upcoming_appointments && profile.upcoming_appointments.length > 0 ? (
+                <div className="appointments-list">
+                  {profile.upcoming_appointments.map((app, i) => (
+                    <div key={i} className="app-item">
+                      <span className="app-spec">🩺 Cita en {app.specialty}</span>
+                      <span className="app-date">
+                        📅 {new Date(app.date).toLocaleDateString('es-MX', {
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric'
+                        })}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <span className="accordion-empty">No tienes citas médicas agendadas.</span>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

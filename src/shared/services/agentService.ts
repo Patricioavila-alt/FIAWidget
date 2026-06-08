@@ -8,7 +8,8 @@
 //   import { validatePrescription } from '@/shared/services/agentService';
 // ============================================================
 
-export { getAuthToken, BASE_URL }                from './authService';
+export { getAuthToken, BASE_URL, fetchUserProfile }                from './authService';
+export type { UserProfile }                                         from './authService';
 export { FiAChatSession }                        from './chatSession';
 export type { ChatCallbacks }                    from './chatSession';
 export { validatePrescription }                  from './validateService';

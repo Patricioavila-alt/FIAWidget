@@ -255,3 +255,162 @@
 .theme-toggle-btn:hover {
   background: var(--clr-bg-overlay);
 }
+
+/* ─── Accordions / Expediente ─── */
+.user-panel__accordions {
+  padding: 0 var(--sp-4) var(--sp-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.panel-accordion {
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-md);
+  background: var(--clr-bg-elevated);
+  overflow: hidden;
+  transition: all var(--transition-fast);
+}
+
+.panel-accordion__header {
+  width: 100%;
+  padding: var(--sp-3);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--transition-fast);
+}
+
+.panel-accordion__header:hover {
+  background: var(--clr-bg-overlay);
+}
+
+.panel-accordion__title {
+  font-size: var(--text-sm);
+  font-weight: var(--fw-semi);
+  color: var(--clr-text-primary);
+}
+
+.panel-accordion__arrow {
+  font-size: 0.75rem;
+  color: var(--clr-text-muted);
+}
+
+.panel-accordion__content {
+  padding: var(--sp-3);
+  border-top: 1px solid var(--clr-border);
+  background: var(--clr-bg-surface);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+/* Info Item */
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  gap: var(--sp-4);
+}
+
+.info-label {
+  color: var(--clr-text-secondary);
+  font-weight: var(--fw-medium);
+}
+
+.info-value {
+  color: var(--clr-text-primary);
+  text-align: right;
+  word-break: break-word;
+}
+
+/* Badges */
+.badge {
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-weight: var(--fw-bold);
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.badge--blood {
+  background: var(--clr-red-pale);
+  color: var(--clr-red);
+  border: 1px solid rgba(212, 43, 48, 0.2);
+}
+
+.text-red {
+  color: var(--clr-red);
+  font-weight: var(--fw-medium);
+}
+
+/* Medications List */
+.meds-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.med-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--sp-2);
+  border-radius: var(--radius-sm);
+  background: var(--clr-bg-elevated);
+  border: 1px solid var(--clr-border);
+}
+
+.med-name {
+  font-size: var(--text-xs);
+  font-weight: var(--fw-semi);
+  color: var(--clr-text-primary);
+}
+
+.med-freq {
+  font-size: 11px;
+  color: var(--clr-text-secondary);
+  padding-left: var(--sp-3);
+}
+
+/* Appointments List */
+.appointments-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.app-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--sp-2);
+  border-radius: var(--radius-sm);
+  background: var(--clr-bg-elevated);
+  border: 1px solid var(--clr-border);
+}
+
+.app-spec {
+  font-size: var(--text-xs);
+  font-weight: var(--fw-semi);
+  color: var(--clr-text-primary);
+}
+
+.app-date {
+  font-size: 11px;
+  color: var(--clr-text-secondary);
+}
+
+.accordion-empty {
+  font-size: var(--text-xs);
+  color: var(--clr-text-muted);
+  font-style: italic;
+  text-align: center;
+  padding: var(--sp-2) 0;
+}

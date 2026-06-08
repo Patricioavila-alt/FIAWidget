@@ -58,4 +58,26 @@ export async function verifyOtpAndRegister(
   return res.json();
 }
 
+export interface UserProfile {
+  name: string;
+  preferred_name: string;
+  blood_type: string;
+  conditions: string[];
+  allergies: string[];
+  active_medications: Array<{ name: string; frequency: string }>;
+  upcoming_appointments: Array<{ date: string; specialty: string }>;
+  plan: string;
+  points: number;
+  source: string;
+}
+
+export async function fetchUserProfile(): Promise<UserProfile> {
+  const token = await getAuthToken('patient');
+  const res = await fetch(`${BASE_URL}/users/profile`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  if (!res.ok) throw new Error('Error al obtener perfil');
+  return res.json();
+}
+
 export { BASE_URL };
