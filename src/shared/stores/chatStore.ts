@@ -24,6 +24,7 @@ interface ChatState {
   deleteSession:      (sessionId: string) => void;
   hydrateSession:     (sessionId: string, messages: Message[]) => void;
   clearTypingOnSwitch: () => void;
+  reset:              () => void;
 }
 
 export const useChatStore = create<ChatState>()(
@@ -122,6 +123,8 @@ export const useChatStore = create<ChatState>()(
       setAgentTyping: (typing) => set({ isAgentTyping: typing }),
 
       setEditingText: (text) => set({ editingText: text }),
+
+      reset: () => set({ sessions: [], activeSessionId: null, isAgentTyping: false, editingText: null }),
 
       clearTypingOnSwitch: () => set({ isAgentTyping: false }),
 

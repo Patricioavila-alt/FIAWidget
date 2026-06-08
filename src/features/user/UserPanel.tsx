@@ -62,7 +62,7 @@ interface UserPanelProps {
 export const UserPanel: React.FC<UserPanelProps> = ({ onClose }) => {
   const navigate              = useNavigate();
   const { user, clearUser }   = useAuthStore();
-  const { createSession, activeSessionId, activeSession } = useChatStore();
+  const { createSession, activeSessionId, activeSession, reset: resetChat } = useChatStore();
   const { send }              = useChatContext();
 
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
@@ -175,6 +175,7 @@ export const UserPanel: React.FC<UserPanelProps> = ({ onClose }) => {
     } catch {
       // mock mode
     }
+    resetChat();
     clearUser();
     navigate('/');
   };

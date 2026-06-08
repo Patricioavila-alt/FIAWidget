@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/shared/stores/authStore';
+import { useChatStore } from '@/shared/stores/chatStore';
 import { OTPInput } from '@/shared/components';
 import { requestOtp, verifyOtpAndRegister } from '@/shared/services/authService';
 import './AuthPage.css';
@@ -35,7 +36,13 @@ type Step = 'phone' | 'otp' | 'name';
 
 export const AuthPage: React.FC = () => {
   const navigate    = useNavigate();
-  const { setUser } = useAuthStore();
+  const { setUser, isAuthenticated } = useAuthStore();
+
+  React.useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/chat', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   const [step,          setStep]          = useState<Step>('phone');
   const [phone,         setPhone]         = useState('');
@@ -129,6 +136,7 @@ export const AuthPage: React.FC = () => {
     setLoading(true);
     setTimeout(() => {
       const digits = phone.replace(/\D/g, '');
+      useChatStore.getState().reset();
       setUser({ 
         uid: regResult?.userId || `+52${digits}`, 
         phone: `+52${digits}`, 

@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '@/shared/components';
+import { useAuthStore } from '@/shared/stores/authStore';
 import './LandingPage.css';
 
 const features = [
@@ -13,6 +14,13 @@ const features = [
 
 export const LandingPage: React.FC = () => {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuthStore();
+
+  React.useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/chat', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   return (
     <div className="landing">
