@@ -57,12 +57,10 @@
   color: var(--clr-text-primary);
 }
 
-/* Hide hamburger on desktop */
-@media (min-width: 900px) {
-  .chat-header__menu-btn,
-  .chat-header__user-btn {
-    display: none;
-  }
+/* Show menu toggles on desktop for sidebar collapse */
+.chat-header__menu-btn,
+.chat-header__user-btn {
+  display: flex;
 }
 
 .chat-header__avatar {
@@ -82,10 +80,21 @@
 .chat-layout {
   flex: 1;
   display: grid;
-  grid-template-columns: var(--sidebar-left-w) 1fr var(--sidebar-right-w);
+  grid-template-columns: 0px 1fr 0px;
   grid-template-rows: 1fr;
   overflow: hidden;
   position: relative;
+  transition: grid-template-columns 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.chat-layout--left-open {
+  grid-template-columns: var(--sidebar-left-w) 1fr 0px;
+}
+.chat-layout--right-open {
+  grid-template-columns: 0px 1fr var(--sidebar-right-w);
+}
+.chat-layout--left-open.chat-layout--right-open {
+  grid-template-columns: var(--sidebar-left-w) 1fr var(--sidebar-right-w);
 }
 
 /* ─── Sidebars ─── */
@@ -95,10 +104,28 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  transition: opacity 0.25s ease, border 0.25s ease;
 }
 
 .chat-sidebar--left  { border-right: 1px solid var(--clr-border); }
 .chat-sidebar--right { border-left:  1px solid var(--clr-border); }
+
+@media (min-width: 900px) {
+  .chat-sidebar {
+    opacity: 0;
+    pointer-events: none;
+  }
+  .chat-sidebar.chat-sidebar--open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .chat-sidebar--left:not(.chat-sidebar--open) {
+    border-right: 0px solid transparent;
+  }
+  .chat-sidebar--right:not(.chat-sidebar--open) {
+    border-left: 0px solid transparent;
+  }
+}
 
 /* ─── Main chat area ─── */
 .chat-main {
@@ -116,7 +143,7 @@
 /* ─── Mobile responsive ─── */
 @media (max-width: 900px) {
   .chat-layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr !important;
   }
 
   .chat-sidebar {
@@ -127,10 +154,13 @@
     z-index: 30;
     transform: translateX(-110%);
     transition: transform var(--transition-base);
+    opacity: 1 !important;
+    pointer-events: auto !important;
   }
 
   .chat-sidebar--left {
     left: 0;
+    border-right: 1px solid var(--clr-border);
   }
 
   .chat-sidebar--right {

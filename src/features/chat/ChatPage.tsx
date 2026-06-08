@@ -13,8 +13,8 @@ export const ChatPage: React.FC = () => {
   const { user }                           = useAuthStore();
   const { createSession, activeSessionId } = useChatStore();
 
-  const [leftOpen,  setLeftOpen]  = useState(false);
-  const [rightOpen, setRightOpen] = useState(false);
+  const [leftOpen,  setLeftOpen]  = useState(() => window.innerWidth > 900);
+  const [rightOpen, setRightOpen] = useState(() => window.innerWidth > 900);
 
   // Crear sesión inicial si no existe
   React.useEffect(() => {
@@ -58,7 +58,7 @@ export const ChatPage: React.FC = () => {
         </header>
 
         {/* Main layout */}
-        <div className="chat-layout">
+        <div className={`chat-layout ${leftOpen ? 'chat-layout--left-open' : ''} ${rightOpen ? 'chat-layout--right-open' : ''}`}>
           {/* LEFT — Sessions */}
           <aside className={`chat-sidebar chat-sidebar--left ${leftOpen ? 'chat-sidebar--open' : ''}`}>
             <SessionList onClose={() => setLeftOpen(false)} />

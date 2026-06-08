@@ -89,15 +89,27 @@ export const SessionList: React.FC<SessionListProps> = ({ onClose }) => {
       {/* Header */}
       <div className="session-list__header">
         <span className="session-list__title">Conversaciones</span>
-        <button
-          id="new-session-btn"
-          className="session-list__new-btn"
-          onClick={handleNew}
-          title="Nueva conversación"
-          aria-label="Nueva conversación"
-        >
-          ✏️
-        </button>
+        <div className="session-list__actions" style={{ display: 'flex', gap: '6px' }}>
+          <button
+            id="new-session-btn"
+            className="session-list__new-btn"
+            onClick={handleNew}
+            title="Nueva conversación"
+            aria-label="Nueva conversación"
+          >
+            ✏️
+          </button>
+          {onClose && (
+            <button
+              className="session-list__close-btn"
+              onClick={onClose}
+              title="Cerrar panel"
+              aria-label="Cerrar panel"
+            >
+              ✕
+            </button>
+          )}
+        </div>
       </div>
 
       {/* List */}

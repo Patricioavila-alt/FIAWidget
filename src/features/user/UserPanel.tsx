@@ -61,18 +61,40 @@ export const UserPanel: React.FC<UserPanelProps> = ({ onClose }) => {
   const navigate              = useNavigate();
   const { user, clearUser }   = useAuthStore();
   const { createSession, activeSessionId } = useChatStore();
-  const { send }              = useChatContext();   // ← FIX Error 1
+  const { send }              = useChatContext();
 
-  // FIX Error 1: usar send() del contexto para que llegue al WebSocket
+  const [showSignOutConfirm, setShowSignOutConfirm] = React.useState(false);
+  const [darkMode, setDarkMode] = React.useState(() => {
+    return document.documentElement.classList.contains('dark') || localStorage.getItem('theme') === 'dark';
+  });
+
+  const toggleDarkMode = () => {
+    const nextMode = !darkMode;
+    setDarkMode(nextMode);
+    if (nextMode) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  };
+
+  React.useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [darkMode]);
+
   const handleCapability = (cap: Capability) => {
     if (!user) return;
 
-    // Asegurar que haya una sesión activa
     if (!activeSessionId) {
       createSession(user.uid);
     }
 
-    // send() añade al store Y envía al WebSocket
     void send([{ type: 'text', text: cap.prompt }]);
     onClose?.();
   };
@@ -93,22 +115,63 @@ export const UserPanel: React.FC<UserPanelProps> = ({ onClose }) => {
 
   return (
     <div className="user-panel">
-      {/* User info */}
+      {/* User info / Confirm Signout */}
       <div className="user-panel__profile">
-        <Avatar name={user?.name ?? '?'} size="lg" />
-        <div className="user-panel__info">
-          <span className="user-panel__name">{user?.name}</span>
-          <span className="user-panel__phone">{user?.phone}</span>
+        {showSignOutConfirm ? (
+          <div className="user-panel__signout-confirm">
+            <span className="confirm-text">¿Cerrar sesión?</span>
+            <div className="confirm-actions">
+              <button className="confirm-btn confirm-btn--yes" onClick={() => void handleSignOut()}>Sí</button>
+              <button className="confirm-btn confirm-btn--no" onClick={() => setShowSignOutConfirm(false)}>No</button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <Avatar name={user?.name ?? '?'} size="lg" />
+            <div className="user-panel__info">
+              <span className="user-panel__name">{user?.name}</span>
+              <span className="user-panel__phone">{user?.phone}</span>
+            </div>
+            <div className="user-panel__actions">
+              {onClose && (
+                <button
+                  className="user-panel__close-btn"
+                  onClick={onClose}
+                  aria-label="Cerrar panel"
+                  title="Cerrar panel"
+                >
+                  ✕
+                </button>
+              )}
+              <button
+                id="sign-out-btn"
+                className="user-panel__signout"
+                onClick={() => setShowSignOutConfirm(true)}
+                title="Cerrar sesión"
+                aria-label="Cerrar sesión"
+              >
+                ↩
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+
+      <div className="user-panel__divider" />
+
+      {/* Settings (Modo Oscuro) */}
+      <div className="user-panel__section-title">Ajustes</div>
+      <div className="user-panel__settings">
+        <div className="user-panel__setting-row">
+          <span className="setting-label">🌓 Modo Oscuro</span>
+          <button 
+            className="theme-toggle-btn"
+            onClick={toggleDarkMode}
+            title={darkMode ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+          >
+            {darkMode ? 'Activado 🌙' : 'Desactivado ☀️'}
+          </button>
         </div>
-        <button
-          id="sign-out-btn"
-          className="user-panel__signout"
-          onClick={() => void handleSignOut()}
-          title="Cerrar sesión"
-          aria-label="Cerrar sesión"
-        >
-          ↩
-        </button>
       </div>
 
       <div className="user-panel__divider" />

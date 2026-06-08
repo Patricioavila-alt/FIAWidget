@@ -102,6 +102,42 @@
   --header-h:        64px;
 }
 
+/* --- Dark Mode Overrides --- */
+html.dark {
+  --clr-bg-base:       #0d1117;
+  --clr-bg-surface:    #161b22;
+  --clr-bg-elevated:   #21262d;
+  --clr-bg-overlay:    #30363d;
+
+  --clr-blue:          #58a6ff;
+  --clr-blue-mid:      #1f6feb;
+  --clr-blue-light:    #388bfd;
+  --clr-blue-pale:     rgba(56, 139, 253, 0.15);
+  --clr-blue-glow:     rgba(56, 139, 253, 0.2);
+
+  --clr-accent:        var(--clr-blue);
+  --clr-accent-light:  var(--clr-blue-light);
+  --clr-accent-dark:   var(--clr-blue-mid);
+  --clr-accent-glow:   var(--clr-blue-glow);
+
+  --clr-text-primary:  #c9d1d9;
+  --clr-text-secondary:#8b949e;
+  --clr-text-muted:    #484f58;
+  --clr-text-inverse:  #0d1117;
+
+  --clr-border:        rgba(240, 246, 252, 0.1);
+  --clr-border-hover:  #8b949e;
+
+  --gradient-accent:   linear-gradient(135deg, #1f6feb 0%, #388bfd 100%);
+  --gradient-surface:  linear-gradient(180deg, #161b22 0%, #0d1117 100%);
+  --gradient-hero:     linear-gradient(160deg, #0d1117 0%, #161b22 100%);
+}
+
+html.dark .glass {
+  background: rgba(22, 27, 34, 0.85);
+  border: 1px solid rgba(240, 246, 252, 0.1);
+}
+
 /* ============================================================
    RESET & BASE
    ============================================================ */

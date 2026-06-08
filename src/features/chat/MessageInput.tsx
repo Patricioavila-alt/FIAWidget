@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useChatContext } from './ChatContext';
 import { useChatStore }   from '@/shared/stores/chatStore';
@@ -9,7 +9,7 @@ const MAX_IMAGE_SIZE_MB = 4;
 
 export const MessageInput: React.FC = () => {
   const { send, abort, isTyping } = useChatContext();
-  const { isAgentTyping }         = useChatStore();
+  const { isAgentTyping, editingText, setEditingText } = useChatStore();
   const isTypingState = isTyping || isAgentTyping;
 
   const [text,      setText]      = useState('');
@@ -19,12 +19,25 @@ export const MessageInput: React.FC = () => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const autoResize = () => {
+  const autoResize = useCallback(() => {
     const ta = textareaRef.current;
     if (!ta) return;
     ta.style.height = 'auto';
     ta.style.height = `${Math.min(ta.scrollHeight, 160)}px`;
-  };
+  }, []);
+
+  useEffect(() => {
+    if (editingText !== null) {
+      setText(editingText);
+      setEditingText(null);
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+        textareaRef.current.selectionStart = editingText.length;
+        textareaRef.current.selectionEnd = editingText.length;
+      }
+      setTimeout(autoResize, 50);
+    }
+  }, [editingText, setEditingText, autoResize]);
 
   const fileToBase64 = (file: File): Promise<string> =>
     new Promise((resolve, reject) => {

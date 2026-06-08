@@ -41,6 +41,27 @@
   border-color: var(--clr-accent);
 }
 
+.session-list__close-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--clr-border);
+  background: var(--clr-bg-elevated);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  color: var(--clr-text-muted);
+  transition: all var(--transition-fast);
+}
+
+.session-list__close-btn:hover {
+  background: var(--clr-bg-overlay);
+  border-color: var(--clr-accent);
+  color: var(--clr-text-primary);
+}
+
 .session-list__body {
   flex: 1;
   overflow-y: auto;

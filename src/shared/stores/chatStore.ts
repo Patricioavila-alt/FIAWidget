@@ -7,6 +7,7 @@ interface ChatState {
   sessions:        ChatSession[];
   activeSessionId: string | null;
   isAgentTyping:   boolean;
+  editingText:     string | null;
 
   // Selectors
   activeSession: () => ChatSession | undefined;
@@ -19,6 +20,7 @@ interface ChatState {
   appendToMessage:    (sessionId: string, messageId: string, token: string) => void;
   updateSessionTitle: (sessionId: string, title: string) => void;
   setAgentTyping:     (typing: boolean) => void;
+  setEditingText:     (text: string | null) => void;
   deleteSession:      (sessionId: string) => void;
   hydrateSession:     (sessionId: string, messages: Message[]) => void;
   clearTypingOnSwitch: () => void;
@@ -30,6 +32,7 @@ export const useChatStore = create<ChatState>()(
       sessions:        [],
       activeSessionId: null,
       isAgentTyping:   false,
+      editingText:     null,
 
       activeSession: () => {
         const { sessions, activeSessionId } = get();
@@ -117,6 +120,8 @@ export const useChatStore = create<ChatState>()(
       },
 
       setAgentTyping: (typing) => set({ isAgentTyping: typing }),
+
+      setEditingText: (text) => set({ editingText: text }),
 
       clearTypingOnSwitch: () => set({ isAgentTyping: false }),
 
