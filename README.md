@@ -71,3 +71,8 @@ export default defineConfig([
   },
 ])
 ```
+
+## Deployment
+
+This project is configured to automatically build and deploy to GitHub Pages on every push to the `master` branch using GitHub Actions.
+
