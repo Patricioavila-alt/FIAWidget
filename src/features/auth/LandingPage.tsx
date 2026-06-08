@@ -78,7 +78,7 @@ export const LandingPage: React.FC = () => {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.7 }}
         >
-          <Button size="lg" onClick={() => navigate('/auth')}>
+          <Button size="lg" onClick={() => navigate('/auth', { replace: true })}>
             Comenzar gratis →
           </Button>
           <p className="landing__cta-note">Sin contraseña · Solo tu número de teléfono</p>

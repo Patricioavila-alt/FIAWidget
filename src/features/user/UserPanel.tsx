@@ -12,13 +12,6 @@ import './UserPanel.css';
 
 const CAPABILITIES: Capability[] = [
   {
-    id:          'diagnose',
-    icon:        '🩺',
-    title:       'Diagnóstico',
-    description: 'Describe tus síntomas y recibe orientación',
-    prompt:      'Quiero describir mis síntomas para recibir orientación médica.',
-  },
-  {
     id:          'appointment',
     icon:        '📅',
     title:       'Agendar cita',

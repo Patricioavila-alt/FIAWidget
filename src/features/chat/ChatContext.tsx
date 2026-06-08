@@ -39,39 +39,41 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     isAgentTyping,
   } = useChatStore();
 
-  const sessionRef  = useRef<FiAChatSession | null>(null);
-  const lastSidRef  = useRef<string | null>(null);
+  const sessionsMapRef = useRef<Record<string, FiAChatSession>>({});
   const abortedRef  = useRef(false);          // flag para saber si abort fue manual
 
-  // ── Gestión del WebSocket por sesión activa ────────────────
-  useEffect(() => {
-    if (!activeSessionId || !user) return;
-    if (lastSidRef.current === activeSessionId) return;
-
-    // Limpiar la sesión anterior
-    if (sessionRef.current) {
-      sessionRef.current.close();
-      sessionRef.current = null;
+  const getOrCreateSession = useCallback((sid: string) => {
+    if (!user) return null;
+    let sess = sessionsMapRef.current[sid];
+    if (sess) {
+      if (!sess.isConnected) {
+        sess.connect().catch(() => {});
+      }
+      return sess;
     }
-    setAgentTyping(false);   // ← FIX Error 4: limpia typing al cambiar sesión
-    abortedRef.current = false;
 
-    const fiaSess = new FiAChatSession(activeSessionId, user.uid, {
+    const fiaSess = new FiAChatSession(sid, user.uid, {
       onTyping: () => {
-        if (!abortedRef.current) setAgentTyping(true);
+        if (useChatStore.getState().activeSessionId === sid && !abortedRef.current) {
+          setAgentTyping(true);
+        }
       },
       onMessage: (text) => {
-        setAgentTyping(false);
+        if (useChatStore.getState().activeSessionId === sid) {
+          setAgentTyping(false);
+        }
         abortedRef.current = false;
-        addMessage(activeSessionId, {
+        addMessage(sid, {
           role:  'assistant',
           parts: [{ type: 'text', text }],
         });
       },
       onError: (err) => {
-        setAgentTyping(false);
+        if (useChatStore.getState().activeSessionId === sid) {
+          setAgentTyping(false);
+        }
         if (!abortedRef.current) {
-          addMessage(activeSessionId, {
+          addMessage(sid, {
             role:  'assistant',
             parts: [{ type: 'text', text: `⚠️ ${err.message}` }],
           });
@@ -79,23 +81,37 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       },
     }, {
       userName:     user.name ?? '',
-      isNewSession: (activeSession()?.messages.length ?? 0) === 0,
+      isNewSession: (useChatStore.getState().sessions.find(s => s.id === sid)?.messages.length ?? 0) === 0,
     });
 
     fiaSess.connect().catch((err: Error) => {
-      addMessage(activeSessionId, {
+      addMessage(sid, {
         role:  'assistant',
         parts: [{ type: 'text', text: `⚠️ No se pudo conectar: ${err.message}` }],
       });
     });
 
-    sessionRef.current = fiaSess;
-    lastSidRef.current = activeSessionId;
+    sessionsMapRef.current[sid] = fiaSess;
+    return fiaSess;
+  }, [user, addMessage, setAgentTyping]);
 
+  // ── Gestión del WebSocket por sesión activa ────────────────
+  useEffect(() => {
+    if (!activeSessionId || !user) return;
+
+    // Al cambiar de sesión, aseguramos que la nueva tenga su conexión iniciada
+    setAgentTyping(false);
+    abortedRef.current = false;
+    getOrCreateSession(activeSessionId);
+  }, [activeSessionId, user, getOrCreateSession, setAgentTyping]);
+
+  // Cerrar todas las conexiones en background al desmontar
+  useEffect(() => {
     return () => {
-      setAgentTyping(false);   // cleanup al desmontar
+      Object.values(sessionsMapRef.current).forEach((sess) => sess.close());
+      sessionsMapRef.current = {};
     };
-  }, [activeSessionId, user, addMessage, setAgentTyping]);
+  }, []);
 
   // ── Send ────────────────────────────────────────────────────
   const send = useCallback(async (parts: MessagePart[]) => {
@@ -131,66 +147,25 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     // Necesitamos al menos texto o imagen para enviar
     if (!fullText && imageParts.length === 0) return;
 
-    // Solo usamos la primera imagen (el API acepta una por mensaje)
     const firstImage = imageParts[0];
-    // data puede venir como base64 puro o data-URI — el WS lo acepta ambos
-    // chatSession.send() normaliza internamente
     const image_b64 = firstImage?.data ?? undefined;
 
-    // Re-conectar si fue abortado anteriormente o WS cerrado
-    if (!sessionRef.current?.isConnected) {
-      const fiaSess = new FiAChatSession(activeSessionId, user.uid, {
-        onTyping: () => {
-          if (!abortedRef.current) setAgentTyping(true);
-        },
-        onMessage: (text) => {
-          setAgentTyping(false);
-          abortedRef.current = false;
-          addMessage(activeSessionId, {
-            role:  'assistant',
-            parts: [{ type: 'text', text }],
-          });
-        },
-        onError: (err) => {
-          setAgentTyping(false);
-          if (!abortedRef.current) {
-            addMessage(activeSessionId, {
-              role:  'assistant',
-              parts: [{ type: 'text', text: `⚠️ ${err.message}` }],
-            });
-          }
-        },
-      }, {
-        userName:     user.name ?? '',
-        isNewSession: false, // Reconexión: el agente ya conoce el contexto
-      });
-      try {
-        await fiaSess.connect();
-        sessionRef.current = fiaSess;
-      } catch (err) {
-        addMessage(activeSessionId, {
-          role:  'assistant',
-          parts: [{ type: 'text', text: '⚠️ Sin conexión con el agente. Intenta de nuevo.' }],
-        });
-        return;
-      }
-    }
-
-    sessionRef.current?.send(fullText, image_b64);
-  }, [user, activeSessionId, activeSession, addMessage, updateSessionTitle, setAgentTyping]);
+    const sess = getOrCreateSession(activeSessionId);
+    sess?.send(fullText, image_b64);
+  }, [user, activeSessionId, activeSession, addMessage, updateSessionTitle, getOrCreateSession]);
 
   // ── Abort ────────────────────────────────────────────────────
-  // FIX Error 2: cierra WS limpiamente sin congelar el chat
   const abort = useCallback(() => {
+    if (!activeSessionId) return;
     abortedRef.current = true;
     setAgentTyping(false);
-    // Cierra la conexión actual pero NO limpia lastSidRef
-    // para que se pueda reconectar en el próximo send()
-    sessionRef.current?.close();
-    sessionRef.current = null;
-    // Importante: NO limpiar lastSidRef aquí para que el useEffect
-    // no intente reconectar automáticamente
-  }, [setAgentTyping]);
+
+    const sess = sessionsMapRef.current[activeSessionId];
+    if (sess) {
+      sess.close();
+      delete sessionsMapRef.current[activeSessionId];
+    }
+  }, [activeSessionId, setAgentTyping]);
 
   return (
     <ChatContext.Provider value={{ send, abort, isTyping: isAgentTyping }}>

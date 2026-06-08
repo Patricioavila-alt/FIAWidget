@@ -146,7 +146,7 @@ export const AuthPage: React.FC = () => {
         curp: curp.toUpperCase().trim()
       });
       setLoading(false);
-      navigate('/chat');
+      navigate('/chat', { replace: true });
     }, 500);
   };
 
