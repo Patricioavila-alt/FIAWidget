@@ -147,3 +147,68 @@
 .session-item__delete:hover {
   background: rgba(239, 68, 68, 0.15);
 }
+
+/* ─── Loading spinner (history fetch) ─── */
+.session-item__spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--clr-border);
+  border-top-color: var(--clr-blue);
+  border-radius: 50%;
+  animation: spin-session 0.7s linear infinite;
+}
+
+@keyframes spin-session {
+  to { transform: rotate(360deg); }
+}
+
+/* ─── Delete confirmation ─── */
+.session-item__confirm {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  flex-shrink: 0;
+}
+
+.session-item__confirm-yes,
+.session-item__confirm-no {
+  padding: 2px 8px;
+  font-size: var(--text-xs);
+  font-weight: var(--fw-semi);
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.session-item__confirm-yes {
+  background: var(--clr-red-pale);
+  color: var(--clr-red);
+  border-color: rgba(212, 43, 48, 0.3);
+}
+
+.session-item__confirm-yes:hover {
+  background: var(--clr-red);
+  color: #fff;
+}
+
+.session-item__confirm-no {
+  background: var(--clr-bg-elevated);
+  color: var(--clr-text-secondary);
+  border-color: var(--clr-border);
+}
+
+.session-item__confirm-no:hover {
+  background: var(--clr-bg-overlay);
+}
+
+/* Active item — light theme color */
+.session-item--active {
+  background: var(--clr-blue-pale) !important;
+  border: 1px solid rgba(26, 46, 124, 0.2) !important;
+}
+
+.session-item--active .session-item__title {
+  color: var(--clr-blue);
+}

@@ -1,54 +1,55 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { useAuthStore } from '@/shared/stores/authStore';
-import { useChatStore } from '@/shared/stores/chatStore';
-import { Avatar } from '@/shared/components';
+import { useNavigate }    from 'react-router-dom';
+import { motion }         from 'framer-motion';
+import { useAuthStore }   from '@/shared/stores/authStore';
+import { useChatStore }   from '@/shared/stores/chatStore';
+import { useChatContext } from '@/features/chat/ChatContext';   // ← FIX Error 1
+import { Avatar }         from '@/shared/components';
 import type { Capability } from '@/shared/types';
 import './UserPanel.css';
 
 const CAPABILITIES: Capability[] = [
   {
-    id: 'diagnose',
-    icon: '🩺',
-    title: 'Diagnóstico',
+    id:          'diagnose',
+    icon:        '🩺',
+    title:       'Diagnóstico',
     description: 'Describe tus síntomas y recibe orientación',
-    prompt: 'Quiero describir mis síntomas para recibir orientación médica.',
+    prompt:      'Quiero describir mis síntomas para recibir orientación médica.',
   },
   {
-    id: 'appointment',
-    icon: '📅',
-    title: 'Agendar cita',
+    id:          'appointment',
+    icon:        '📅',
+    title:       'Agendar cita',
     description: 'Solicita una cita médica',
-    prompt: 'Quiero agendar una cita médica.',
+    prompt:      'Quiero agendar una cita médica.',
   },
   {
-    id: 'medication',
-    icon: '💊',
-    title: 'Medicamentos',
+    id:          'medication',
+    icon:        '💊',
+    title:       'Medicamentos',
     description: 'Información sobre tu medicación',
-    prompt: 'Necesito información sobre mis medicamentos.',
+    prompt:      'Necesito información sobre mis medicamentos.',
   },
   {
-    id: 'history',
-    icon: '📋',
-    title: 'Historial',
+    id:          'history',
+    icon:        '📋',
+    title:       'Historial',
     description: 'Consulta tu historial clínico',
-    prompt: 'Quiero ver mi historial clínico.',
+    prompt:      'Quiero ver mi historial clínico.',
   },
   {
-    id: 'nutrition',
-    icon: '🥗',
-    title: 'Nutrición',
+    id:          'nutrition',
+    icon:        '🥗',
+    title:       'Nutrición',
     description: 'Consejos de alimentación saludable',
-    prompt: 'Dame consejos de nutrición y alimentación saludable.',
+    prompt:      'Dame consejos de nutrición y alimentación saludable.',
   },
   {
-    id: 'faq',
-    icon: '❓',
-    title: 'Preguntas frecuentes',
+    id:          'faq',
+    icon:        '❓',
+    title:       'Preguntas frecuentes',
     description: 'Resuelve tus dudas comunes',
-    prompt: '¿Cuáles son las preguntas frecuentes que puedes resolver?',
+    prompt:      '¿Cuáles son las preguntas frecuentes que puedes resolver?',
   },
 ];
 
@@ -57,20 +58,22 @@ interface UserPanelProps {
 }
 
 export const UserPanel: React.FC<UserPanelProps> = ({ onClose }) => {
-  const navigate   = useNavigate();
-  const { user, clearUser } = useAuthStore();
-  const { addMessage, activeSessionId, createSession } = useChatStore();
+  const navigate              = useNavigate();
+  const { user, clearUser }   = useAuthStore();
+  const { createSession, activeSessionId } = useChatStore();
+  const { send }              = useChatContext();   // ← FIX Error 1
 
+  // FIX Error 1: usar send() del contexto para que llegue al WebSocket
   const handleCapability = (cap: Capability) => {
     if (!user) return;
-    let sessionId = activeSessionId;
-    if (!sessionId) {
-      sessionId = createSession(user.uid);
+
+    // Asegurar que haya una sesión activa
+    if (!activeSessionId) {
+      createSession(user.uid);
     }
-    addMessage(sessionId, {
-      role: 'user',
-      parts: [{ type: 'text', text: cap.prompt }],
-    });
+
+    // send() añade al store Y envía al WebSocket
+    void send([{ type: 'text', text: cap.prompt }]);
     onClose?.();
   };
 
@@ -82,7 +85,7 @@ export const UserPanel: React.FC<UserPanelProps> = ({ onClose }) => {
         await signOut(auth as import('firebase/auth').Auth);
       }
     } catch {
-      // mock mode — no Firebase
+      // mock mode
     }
     clearUser();
     navigate('/');

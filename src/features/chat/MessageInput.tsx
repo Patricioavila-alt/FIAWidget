@@ -1,15 +1,16 @@
 import React, { useRef, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAgent } from '@/shared/hooks/useAgent';
-import { useChatStore } from '@/shared/stores/chatStore';
+import { useChatContext } from './ChatContext';
+import { useChatStore }   from '@/shared/stores/chatStore';
 import type { MessagePart } from '@/shared/types';
 import './MessageInput.css';
 
 const MAX_IMAGE_SIZE_MB = 4;
 
 export const MessageInput: React.FC = () => {
-  const { send, abort }    = useAgent();
-  const { isAgentTyping }  = useChatStore();
+  const { send, abort, isTyping } = useChatContext();
+  const { isAgentTyping }         = useChatStore();
+  const isTypingState = isTyping || isAgentTyping;
 
   const [text,      setText]      = useState('');
   const [images,    setImages]    = useState<{ file: File; preview: string; base64: string; mimeType: string }[]>([]);
@@ -54,7 +55,7 @@ export const MessageInput: React.FC = () => {
   };
 
   const handleSend = useCallback(async () => {
-    if ((!text.trim() && images.length === 0) || isAgentTyping) return;
+    if ((!text.trim() && images.length === 0) || isTypingState) return;
 
     const parts: MessagePart[] = [
       ...images.map((img): MessagePart => ({
@@ -128,7 +129,7 @@ export const MessageInput: React.FC = () => {
           onClick={() => fileInputRef.current?.click()}
           aria-label="Adjuntar imagen"
           title="Adjuntar imagen"
-          disabled={isAgentTyping}
+          disabled={isTypingState}
         >
           📎
         </button>
@@ -152,12 +153,12 @@ export const MessageInput: React.FC = () => {
           rows={1}
           onChange={(e) => { setText(e.target.value); autoResize(); }}
           onKeyDown={handleKeyDown}
-          disabled={isAgentTyping}
+          disabled={isTypingState}
           aria-label="Campo de mensaje"
         />
 
-        {/* Send / Stop */}
-        {isAgentTyping ? (
+        {/* Send / Stop — FIX Error 2: abort no congela el chat */}
+        {isTypingState ? (
           <button
             id="stop-agent-btn"
             className="message-input__send-btn message-input__send-btn--stop"
