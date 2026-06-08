@@ -77,6 +77,9 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
           });
         }
       },
+    }, {
+      userName:     user.name ?? '',
+      isNewSession: (activeSession()?.messages.length ?? 0) === 0,
     });
 
     fiaSess.connect().catch((err: Error) => {
@@ -157,6 +160,9 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
             });
           }
         },
+      }, {
+        userName:     user.name ?? '',
+        isNewSession: false, // Reconexión: el agente ya conoce el contexto
       });
       try {
         await fiaSess.connect();

@@ -33,15 +33,24 @@ export class FiAChatSession {
   private ws:        WebSocket | null = null;
   private sessionId: string;
   private userId:    string;
+  private userName:  string;
   private token:     string           = '';
   private callbacks: ChatCallbacks;
   private closed:    boolean          = false;
   private sendQueue: string[]         = [];
+  private isNewSession: boolean;
 
-  constructor(sessionId: string, userId: string, callbacks: ChatCallbacks) {
-    this.sessionId = sessionId;
-    this.userId    = userId;
-    this.callbacks = callbacks;
+  constructor(
+    sessionId: string,
+    userId: string,
+    callbacks: ChatCallbacks,
+    options?: { userName?: string; isNewSession?: boolean }
+  ) {
+    this.sessionId    = sessionId;
+    this.userId       = userId;
+    this.userName     = options?.userName ?? '';
+    this.isNewSession = options?.isNewSession ?? false;
+    this.callbacks    = callbacks;
   }
 
   /** Conecta (o reconecta) el WebSocket. Llama antes del primer send(). */
@@ -53,10 +62,24 @@ export class FiAChatSession {
   private _openSocket() {
     if (this.closed) return;
 
-    const url = `${WS_BASE}/ws/chat/${this.sessionId}?token=${this.token}&platform=web&user_id=${encodeURIComponent(this.userId)}`;
+    // Construir URL con user_id y user_name para que el agente conozca al usuario
+    let url = `${WS_BASE}/ws/chat/${this.sessionId}?token=${this.token}&platform=web&user_id=${encodeURIComponent(this.userId)}`;
+    if (this.userName) {
+      url += `&user_name=${encodeURIComponent(this.userName)}`;
+    }
     this.ws = new WebSocket(url);
 
     this.ws.onopen = () => {
+      // En sesiones nuevas, enviar el nombre del usuario como primer mensaje de contexto
+      // para que el agente lo registre y no lo vuelva a pedir
+      if (this.isNewSession && this.userName) {
+        const ctx = JSON.stringify({
+          message: `Mi nombre es ${this.userName}. Por favor, úsalo para dirigirte a mí durante toda esta sesión.`,
+        });
+        this.ws?.send(ctx);
+        this.isNewSession = false; // Solo enviar una vez por sesión
+      }
+
       // Enviar mensajes encolados mientras se conectaba
       while (this.sendQueue.length > 0) {
         const msg = this.sendQueue.shift()!;
