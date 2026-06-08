@@ -108,23 +108,31 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     // Auto-título
     if (session.messages.length === 0) {
       const firstText = parts.find((p) => p.type === 'text');
-      if (firstText?.type === 'text') {
-        updateSessionTitle(
-          activeSessionId,
-          firstText.text.slice(0, 50) + (firstText.text.length > 50 ? '…' : ''),
-        );
-      }
+      const titleSrc = firstText?.type === 'text' ? firstText.text : '📷 Imagen adjunta';
+      updateSessionTitle(
+        activeSessionId,
+        titleSrc.slice(0, 50) + (titleSrc.length > 50 ? '\u2026' : ''),
+      );
     }
 
-    // Construir texto para el WS
-    const textParts  = parts.filter((p) => p.type === 'text').map((p) => (p as { type: 'text'; text: string }).text);
-    const imageParts = parts.filter((p) => p.type === 'image');
-    const imageNote  = imageParts.length > 0
-      ? `[El usuario adjuntó ${imageParts.length} imagen${imageParts.length > 1 ? 's' : ''}]`
-      : '';
+    // ── Extraer partes ────────────────────────────────────────
+    const textParts  = parts
+      .filter((p): p is { type: 'text'; text: string } => p.type === 'text')
+      .map((p) => p.text);
 
-    const fullText = [imageNote, ...textParts].filter(Boolean).join('\n').trim();
-    if (!fullText) return;
+    const imageParts = parts
+      .filter((p): p is { type: 'image'; mimeType: string; data: string; previewUrl?: string } => p.type === 'image');
+
+    const fullText = textParts.join('\n').trim();
+
+    // Necesitamos al menos texto o imagen para enviar
+    if (!fullText && imageParts.length === 0) return;
+
+    // Solo usamos la primera imagen (el API acepta una por mensaje)
+    const firstImage = imageParts[0];
+    // data puede venir como base64 puro o data-URI — el WS lo acepta ambos
+    // chatSession.send() normaliza internamente
+    const image_b64 = firstImage?.data ?? undefined;
 
     // Re-conectar si fue abortado anteriormente o WS cerrado
     if (!sessionRef.current?.isConnected) {
@@ -162,7 +170,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       }
     }
 
-    sessionRef.current?.send(fullText);
+    sessionRef.current?.send(fullText, image_b64);
   }, [user, activeSessionId, activeSession, addMessage, updateSessionTitle, setAgentTyping]);
 
   // ── Abort ────────────────────────────────────────────────────

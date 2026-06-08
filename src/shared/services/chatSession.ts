@@ -4,7 +4,9 @@
 // Flujo:
 //   1. getAuthToken()  →  JWT
 //   2. WebSocket  wss://.../ws/chat/{sessionId}?token=JWT&user_id=...
-//   3. send({ message: "..." })
+//   3. send({ message: "...", image_b64?: "..." })
+//        image_b64: base64 puro o data-URI — ambos aceptados.
+//        Se normaliza a base64 puro antes de enviar.
 //   4. onmessage:
 //        { type: "typing" }   → el agente está escribiendo
 //        { type: "response", message: "..." } → respuesta final
@@ -91,9 +93,21 @@ export class FiAChatSession {
     };
   }
 
-  /** Envía un mensaje de texto al agente. */
-  send(text: string): void {
-    const payload = JSON.stringify({ message: text });
+  /**
+   * Envía un mensaje al agente.
+   * @param text       Texto del mensaje (requerido; puede ser cadena vacía si solo se manda imagen).
+   * @param image_b64  Imagen en base64 puro o data-URI (data:image/...;base64,...). Opcional.
+   */
+  send(text: string, image_b64?: string): void {
+    // Normalizar: quitar el prefijo data-URI si existe
+    const pureB64 = image_b64
+      ? image_b64.replace(/^data:[^;]+;base64,/, '')
+      : undefined;
+
+    const body: Record<string, string> = { message: text };
+    if (pureB64) body.image_b64 = pureB64;
+
+    const payload = JSON.stringify(body);
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(payload);
     } else {
